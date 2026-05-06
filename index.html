@@ -3,105 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>THE NUMBER: OVERDRIVE</title>
+    <title>THE NUMBER: GLITCH</title>
     <style>
         :root {
-            --pop-yellow: #fff000;
-            --pop-pink: #ff007c;
-            --pop-blue: #00e5ff;
-            --pop-purple: #7000ff;
+            --neon-pink: #ff007c;
+            --neon-blue: #00e5ff;
+            --neon-green: #39ff14;
+            --bg-dark: #050005;
         }
         body {
             margin: 0; padding: 0; width: 100%; height: 100dvh; overflow: hidden;
-            background: #000; color: white;
-            font-family: 'Arial Black', sans-serif;
+            background: var(--bg-dark); color: white; font-family: 'Arial Black', sans-serif;
             user-select: none; -webkit-user-select: none; touch-action: none;
             display: flex; flex-direction: column; align-items: center;
-            transition: background 0.1s;
         }
 
-        /* 背景：サンバースト（連打で加速・変色） */
+        /* 常に歪み続けるサイケデリック背景 */
         #sunburst {
             position: absolute; top: 50%; left: 50%; width: 300vmax; height: 300vmax;
             margin-left: -150vmax; margin-top: -150vmax;
-            background: conic-gradient(from 0deg, transparent 0deg 15deg, rgba(255, 255, 255, 0.05) 15deg 30deg);
-            background-size: 30deg 30deg; animation: rotateSun 20s linear infinite;
-            pointer-events: none; z-index: 1; transition: filter 0.3s;
+            background: conic-gradient(
+                from 0deg, 
+                transparent 0deg 20deg, 
+                var(--neon-pink) 20deg 22deg, 
+                transparent 22deg 40deg, 
+                var(--neon-blue) 40deg 42deg
+            );
+            opacity: 0.2; animation: rotateSun 15s linear infinite;
+            pointer-events: none; z-index: 1; filter: blur(2px);
         }
         @keyframes rotateSun { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        /* フラッシュ演出用 */
-        #flash {
-            position: fixed; top:0; left:0; width:100%; height:100%;
-            background: white; opacity: 0; pointer-events: none; z-index: 1000;
+        /* グリッチノイズ（叩いた時に激しく反応） */
+        #glitch-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 4px);
+            pointer-events: none; z-index: 900; opacity: 0;
+            mix-blend-mode: difference; /* 色反転効果 */
         }
 
-        /* 統計表示 */
-        #mps-display { 
-            margin-top: 10dvh; font-size: 8vw; color: var(--pop-blue); 
-            text-shadow: 0 0 20px var(--pop-blue); z-index: 50; 
-        }
-
-        /* 中央のコア・ナンバー（インパクトの核） */
+        /* スコア表示（中央の神体） */
         #core-wrapper { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
             width: 100vw; text-align: center; cursor: pointer; z-index: 100;
         }
         #score-display { 
             display: inline-block; font-size: 25vw; font-weight: 900; 
-            color: var(--pop-yellow); filter: drop-shadow(0 0 30px var(--pop-yellow));
-            line-height: 1; transition: transform 0.05s, font-size 0.1s;
+            color: #fff;
+            text-shadow: 
+                4px 4px 0px var(--neon-pink),
+                -4px -4px 0px var(--neon-blue),
+                0 0 30px rgba(255,255,255,0.5);
+            line-height: 1; transition: 0.04s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        
-        /* パーティクル（飛び散る数字） */
+
+        /* 爆発する数字パーティクル */
         .particle { 
             position: absolute; pointer-events: none; font-weight: 900; z-index: 200; 
-            animation: particleOut 0.6s cubic-bezier(0.12, 0, 0.39, 0) forwards; 
-            font-size: 5vw;
+            animation: glitchPop 0.6s ease-out forwards; 
+            font-size: 7vw; color: var(--neon-green);
+            text-shadow: 2px 2px 0px black;
         }
-        @keyframes particleOut { 
-            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 
-            100% { transform: translate(var(--tx), var(--ty)) scale(2) rotate(var(--tr)); opacity: 0; } 
+        @keyframes glitchPop {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+            50% { transform: translate(var(--tx), var(--ty)) scale(1.5) skewX(20deg); }
+            100% { transform: translate(var(--tx), var(--ty)) scale(2) skewX(-20deg); opacity: 0; }
         }
 
-        /* ショップ：買えないものは灰色 */
-        #footer { position: absolute; bottom: 40px; z-index: 110; }
+        /* 下部UI */
+        #mps-display { 
+            font-size: 7vw; color: var(--neon-green); 
+            text-shadow: 0 0 10px var(--neon-green); 
+            margin-top: 12dvh; z-index: 50; 
+        }
+
+        #footer { position: absolute; bottom: 6dvh; z-index: 110; width: 100%; display: flex; justify-content: center; }
         #shop-trigger {
-            background: var(--pop-pink); color: white; border: 5px solid white; padding: 20px 60px; border-radius: 100px;
-            font-size: 32px; font-weight: 900; cursor: pointer; box-shadow: 0 10px 0 #b30057;
+            background: transparent; color: #fff; border: 3px solid #fff;
+            padding: 15px 45px; font-size: 20px; font-weight: 900;
+            box-shadow: 4px 4px 0px var(--neon-pink);
+            text-transform: uppercase; cursor: pointer; transition: 0.1s;
         }
+        #shop-trigger:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px; }
 
+        /* ショップ画面（ダークグリッチ） */
         #shop-overlay { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.95); z-index: 500; display: none; flex-direction: column; 
-            border: 10px solid var(--pop-purple); box-sizing: border-box;
+            background: rgba(0,0,0,0.98); z-index: 1000; display: none; flex-direction: column; 
+            padding: 20px; box-sizing: border-box; border-left: 10px solid var(--neon-blue);
         }
-        #shop-header { padding: 40px; text-align: center; background: var(--pop-purple); }
-        #shop-list { flex: 1; overflow-y: auto; padding: 20px 0; }
-        
         .shop-item {
-            background: #1a1a1a; border: 4px solid #333; margin: 15px 25px; padding: 20px;
-            display: flex; justify-content: space-between; align-items: center; border-radius: 20px;
-            filter: grayscale(1) brightness(0.5); transition: 0.2s; pointer-events: none;
+            background: #111; border: 1px solid #333; margin-bottom: 12px; padding: 18px;
+            display: flex; justify-content: space-between; align-items: center;
+            filter: grayscale(1); opacity: 0.2; transition: 0.2s;
         }
         .shop-item.can-buy { 
-            filter: grayscale(0) brightness(1); border-color: var(--pop-blue); 
-            pointer-events: auto; cursor: pointer;
+            filter: grayscale(0); opacity: 1; border-color: var(--neon-blue); 
+            box-shadow: -5px 5px 0px var(--neon-pink);
         }
-        .shop-item:active { transform: scale(0.95); }
-
-        .item-name { font-size: 24px; color: var(--pop-blue); font-weight: 900; }
-        .item-cost { font-size: 18px; color: var(--pop-yellow); display: block; }
-        .item-count { font-size: 40px; color: rgba(255,255,255,0.1); font-weight: 900; }
-
-        #close-shop { margin: 30px; background: white; color: black; border: none; padding: 20px; border-radius: 15px; font-size: 24px; font-weight: 900; }
     </style>
 </head>
 <body>
 
-    <div id="flash"></div>
+    <div id="glitch-layer"></div>
     <div id="sunburst"></div>
-
     <div id="mps-display">0 /s</div>
 
     <div id="core-wrapper">
@@ -109,108 +114,65 @@
     </div>
 
     <div id="footer">
-        <button id="shop-trigger" onclick="toggleShop(true)">GET POWER</button>
+        <button id="shop-trigger" onclick="toggleShop(true)">UPGRADE_SYSTEM</button>
     </div>
 
     <div id="shop-overlay">
-        <div id="shop-header">
-            <h1 style="margin:0; font-size: 40px;">UPGRADE</h1>
-            <div id="shop-current-score" style="font-size: 24px; color: var(--pop-yellow);">0</div>
-        </div>
-        <div id="shop-list"></div>
-        <button id="close-shop" onclick="toggleShop(false)">CLOSE</button>
+        <h1 style="color:var(--neon-blue); font-size: 35px; letter-spacing: -2px;">ROOT_ACCESS</h1>
+        <div id="shop-current-score" style="color:var(--neon-pink); font-size: 20px; margin-bottom: 20px;">0 NUMBERS</div>
+        <div id="shop-list" style="flex:1; overflow-y:auto;"></div>
+        <button onclick="toggleShop(false)" style="background:var(--neon-pink); color:white; padding:20px; font-weight:900; border:none;">BACK_TO_CORE</button>
     </div>
 
     <script>
         let score = 0;
-        let lastDigitCount = 0;
-        let combo = 0;
-        let comboTimer;
-
         const items = [
-            { name: "Auto Clicker", cost: 15, mps: 1, count: 0 },
-            { name: "Turbo Engine", cost: 100, mps: 8, count: 0 },
-            { name: "Mega Miner", cost: 1100, mps: 45, count: 0 },
-            { name: "Nuclear Core", cost: 12000, mps: 380, count: 0 },
-            { name: "God Server", cost: 130000, mps: 2500, count: 0 },
-            { name: "Void Eater", cost: 1400000, mps: 18000, count: 0 }
+            { name: "CPU_SLAVE", cost: 15, mps: 1, count: 0 },
+            { name: "BOT_NET", cost: 120, mps: 10, count: 0 },
+            { name: "LOGIC_BOMB", cost: 1200, mps: 55, count: 0 },
+            { name: "CORE_HACK", cost: 15000, mps: 450, count: 0 },
+            { name: "VOID_ENGINE", cost: 200000, mps: 4000, count: 0 }
         ];
-
-        function initShop() {
-            const container = document.getElementById('shop-list');
-            container.innerHTML = '';
-            items.forEach((item, i) => {
-                const div = document.createElement('div');
-                div.className = 'shop-item';
-                div.id = `item-${i}`;
-                div.onclick = () => buyItem(i);
-                div.innerHTML = `
-                    <div class="item-info">
-                        <span class="item-name">${item.name}</span>
-                        <span class="item-cost" id="cost-${i}">$ ${item.cost.toLocaleString()}</span>
-                    </div>
-                    <div class="item-count" id="count-${i}">0</div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function toggleShop(show) {
-            document.getElementById('shop-overlay').style.display = show ? 'flex' : 'none';
-            updateUI();
-        }
 
         function handleAction(e) {
             if (e.type === 'touchstart' && e.cancelable) e.preventDefault();
             
-            // 1. スクリーンシェイク
-            document.body.style.transform = `translate(${(Math.random()-0.5)*15}px, ${(Math.random()-0.5)*15}px)`;
-            setTimeout(() => document.body.style.transform = 'translate(0,0)', 50);
+            // 1. 強烈なランダム揺れ
+            const intensity = 25;
+            document.body.style.transform = `translate(${(Math.random()-0.5)*intensity}px, ${(Math.random()-0.5)*intensity}px)`;
+            setTimeout(() => document.body.style.transform = 'translate(0,0)', 40);
 
-            // 2. 背景加速とヒートアップ
-            const sun = document.getElementById('sunburst');
-            sun.style.animationDuration = '0.5s';
-            sun.style.filter = `hue-rotate(${Math.random()*360}deg) brightness(2)`;
-            
-            // 3. スコア計算
-            let clickPower = 1 + Math.floor(getTotalMps() * 0.15);
-            score += clickPower;
+            // 2. グリッチ発動（ノイズ＋色反転）
+            const gl = document.getElementById('glitch-layer');
+            gl.style.opacity = '1';
+            setTimeout(() => gl.style.opacity = '0', 60);
 
-            // 4. 中央数字の巨大化リアクション
+            // 3. コア数字のリアクション
             const display = document.getElementById('score-display');
-            display.style.transform = 'scale(1.2) rotate('+(Math.random()-0.5)*10+'deg)';
-            setTimeout(() => display.style.transform = 'scale(1) rotate(0deg)', 80);
+            display.style.transform = `scale(1.4) skew(${(Math.random()-0.5)*30}deg) rotate(${(Math.random()-0.5)*15}deg)`;
+            setTimeout(() => {
+                display.style.transform = 'scale(1) skew(0deg) rotate(0deg)';
+            }, 70);
+
+            let power = 1 + Math.floor(getTotalMps() * 0.25);
+            score += power;
 
             const x = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
             const y = (e.type === 'touchstart') ? e.touches[0].clientY : e.clientY;
-            
-            createParticle(x, y, clickPower);
-            checkMilestone();
+            createParticle(x, y, power);
             updateUI();
         }
 
         function createParticle(x, y, val) {
             const p = document.createElement('div');
             p.className = 'particle';
-            p.innerText = `+${val.toLocaleString()}`;
-            p.style.color = Math.random() > 0.5 ? 'var(--pop-yellow)' : 'white';
+            p.innerText = val.toLocaleString();
             p.style.left = x + 'px'; p.style.top = y + 'px';
-            p.style.setProperty('--tx', (Math.random() - 0.5) * 400 + 'px');
-            p.style.setProperty('--ty', (Math.random() - 1.2) * 400 + 'px');
-            p.style.setProperty('--tr', (Math.random() - 0.5) * 100 + 'deg');
+            p.style.setProperty('--tx', (Math.random() - 0.5) * 600 + 'px');
+            p.style.setProperty('--ty', (Math.random() - 1.5) * 500 + 'px');
+            p.style.setProperty('--tr', (Math.random() - 0.5) * 360 + 'deg');
             document.body.appendChild(p);
             setTimeout(() => p.remove(), 600);
-        }
-
-        function checkMilestone() {
-            const currentDigits = Math.floor(Math.log10(score || 1));
-            if (currentDigits > lastDigitCount) {
-                // 桁が上がった時のフラッシュ！
-                const f = document.getElementById('flash');
-                f.style.opacity = '1';
-                setTimeout(() => f.style.opacity = '0', 200);
-                lastDigitCount = currentDigits;
-            }
         }
 
         function getTotalMps() { return items.reduce((sum, item) => sum + (item.mps * item.count), 0); }
@@ -219,38 +181,47 @@
             if (score >= items[id].cost) {
                 score -= items[id].cost;
                 items[id].count++;
-                items[id].cost = Math.floor(items[id].cost * 1.4);
+                items[id].cost = Math.floor(items[id].cost * 1.55);
                 updateUI();
             }
         }
 
         function updateUI() {
-            const rounded = Math.floor(score);
-            document.getElementById('score-display').innerText = rounded.toLocaleString();
-            document.getElementById('shop-current-score').innerText = rounded.toLocaleString();
+            const currentScoreStr = Math.floor(score).toLocaleString();
+            document.getElementById('score-display').innerText = currentScoreStr;
+            document.getElementById('shop-current-score').innerText = currentScoreStr + " NUMBERS";
             document.getElementById('mps-display').innerText = `${getTotalMps().toLocaleString()} /s`;
+            
+            const container = document.getElementById('shop-list');
+            if (container.innerHTML === "") {
+                items.forEach((item, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'shop-item';
+                    div.id = `item-${i}`;
+                    div.onclick = () => buyItem(i);
+                    container.appendChild(div);
+                });
+            }
             
             items.forEach((item, i) => {
                 const el = document.getElementById(`item-${i}`);
-                document.getElementById(`cost-${i}`).innerText = `$ ${item.cost.toLocaleString()}`;
-                document.getElementById(`count-${i}`).innerText = item.count;
+                el.innerHTML = `
+                    <div><b style="color:var(--neon-blue)">${item.name}</b><br><small style="color:var(--neon-pink)">$${item.cost.toLocaleString()}</small></div>
+                    <div style="font-size:30px; color:#333;">${item.count}</div>
+                `;
                 if (score >= item.cost) el.classList.add('can-buy');
                 else el.classList.remove('can-buy');
             });
         }
 
-        // 自動増加 & 背景の冷却
+        function toggleShop(s) { document.getElementById('shop-overlay').style.display = s ? 'flex' : 'none'; }
+
+        // 背景回転の動的変化（連打で加速）
         setInterval(() => {
             score += (getTotalMps() / 10);
-            const sun = document.getElementById('sunburst');
-            const currentSpeed = parseFloat(sun.style.animationDuration);
-            if (currentSpeed < 20) {
-                sun.style.animationDuration = (currentSpeed + 0.5) + 's';
-            }
             updateUI();
         }, 100);
-
-        initShop();
+        
         const core = document.getElementById('core-wrapper');
         core.addEventListener('touchstart', handleAction, { passive: false });
         core.addEventListener('mousedown', handleAction);
