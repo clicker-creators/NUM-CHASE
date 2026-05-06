@@ -3,91 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>THE NUMBER: DESTRUCTION</title>
+    <title>THE NUMBER: WARFARE</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        :root {
-            --yellow: #fff000; --pink: #ff007c; --blue: #00e5ff; --purple: #7000ff;
-        }
-        body {
-            margin: 0; padding: 0; width: 100%; height: 100dvh; overflow: hidden;
-            background: #000; color: white; font-family: 'Arial Black', sans-serif;
-            user-select: none; -webkit-user-select: none; touch-action: none;
-        }
+        :root { --yellow: #fff000; --pink: #ff007c; --blue: #00e5ff; --purple: #7000ff; }
+        body { margin: 0; background: #000; color: white; font-family: 'Arial Black', sans-serif; overflow: hidden; touch-action: none; }
+        #game-screen { width: 100%; height: 100dvh; display: flex; flex-direction: column; align-items: center; position: relative; }
 
-        /* 画面揺れ用コンテナ */
-        #game-screen { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; position: relative; }
-        .shake { animation: shake 0.1s infinite; }
-        @keyframes shake {
-            0% { transform: translate(2px, 1px); } 10% { transform: translate(-1px, -2px); }
-            20% { transform: translate(-3px, 0px); } 100% { transform: translate(0, 0); }
-        }
-
-        /* 背景サンバースト */
+        /* 背景：静かに回転するサンバースト */
         #bg {
             position: absolute; width: 200vmax; height: 200vmax; top: 50%; left: 50%;
-            margin: -100vmax; background: conic-gradient(from 0deg, #111 0deg 10deg, #000 10deg 20deg);
-            z-index: 0; animation: rotate 20s linear infinite; pointer-events: none;
+            margin: -100vmax; background: conic-gradient(from 0deg, #0a0a0a 0deg 15deg, #000 15deg 30deg);
+            z-index: 0; animation: rotate 30s linear infinite; pointer-events: none;
         }
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        /* ヘッダー：ステータス */
-        #hud { position: absolute; top: 20px; width: 90%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-        .pill { background: rgba(0,0,0,0.7); border: 2px solid #fff; padding: 5px 15px; border-radius: 20px; font-size: 12px; }
+        /* ランキングボード */
+        #leaderboard {
+            position: absolute; left: 10px; top: 20px; width: 160px; z-index: 100;
+            background: rgba(0,0,0,0.85); border: 2px solid var(--blue); border-radius: 10px; padding: 10px;
+        }
+        .rank-item { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; border-bottom: 1px solid #222; }
+        .rank-item.is-me { color: var(--yellow); font-weight: bold; }
 
-        /* 中央：コア（数字） */
-        #core-container {
-            margin-top: 25dvh; z-index: 10; cursor: pointer; text-align: center;
-            perspective: 1000px;
+        /* 攻撃対象パネル */
+        #target-panel {
+            position: absolute; right: 10px; top: 20px; width: 140px; z-index: 100;
+            background: #111; border: 3px solid var(--pink); border-radius: 15px; padding: 10px; text-align: center;
         }
-        #score {
-            font-size: 25vw; line-height: 1; color: var(--yellow);
-            filter: drop-shadow(0 0 20px var(--yellow)); display: inline-block;
-            transition: transform 0.05s;
-        }
-        #mps { color: var(--blue); font-size: 5vw; margin-top: 10px; }
+        .target-score { font-size: 18px; color: var(--pink); display: block; margin-bottom: 8px; font-family: monospace; }
 
-        /* 右側：ターゲット（略奪リスト） */
-        #target-list {
-            position: absolute; right: 10px; top: 100px; width: 100px; z-index: 100;
+        /* メインコア（クリック対象） */
+        #core-container { margin-top: 35dvh; text-align: center; z-index: 10; cursor: pointer; }
+        #score-display { 
+            font-size: 20vw; color: var(--yellow); filter: drop-shadow(0 0 15px var(--yellow)); 
+            line-height: 0.8; transition: transform 0.05s; 
         }
-        .target-card {
-            background: #222; border: 2px solid var(--pink); border-radius: 10px;
-            padding: 8px; margin-bottom: 10px; text-align: center; font-size: 10px;
-        }
-        .target-score { color: var(--pink); font-size: 14px; display: block; overflow: hidden; }
-        .attack-btn {
-            background: var(--pink); border: none; color: white; width: 100%;
-            margin-top: 5px; border-radius: 5px; font-weight: 900; cursor: pointer;
-        }
+        #mps-display { color: var(--blue); font-size: 5vw; margin-top: 15px; opacity: 0.8; }
 
-        /* 下部：ショップ */
-        #footer { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-around; z-index: 100; }
-        .main-btn {
-            background: var(--purple); color: white; border: 3px solid white; padding: 15px 30px;
-            border-radius: 15px; font-size: 18px; font-weight: 900; box-shadow: 0 6px 0 #4a00a8;
-        }
+        /* フッターボタン */
+        #footer { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; z-index: 100; }
+        .btn { background: var(--purple); color: white; border: 3px solid white; padding: 15px 30px; border-radius: 50px; font-weight: 900; box-shadow: 0 6px 0 #4a00a8; cursor: pointer; }
+        .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #4a00a8; }
+        .btn-steal { background: var(--pink); box-shadow: 0 6px 0 #b30057; }
 
-        /* エフェクト */
-        .particle {
-            position: absolute; pointer-events: none; z-index: 200; font-weight: 900;
-            animation: p-out 0.6s cubic-bezier(0.12, 0, 0.39, 0) forwards;
-        }
-        @keyframes p-out {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: translate(var(--tx), var(--ty)) scale(2) rotate(20deg); opacity: 0; }
-        }
+        /* ポップアップエフェクト */
+        .particle { position: absolute; pointer-events: none; font-weight: 900; animation: p-out 0.5s ease-out forwards; white-space: nowrap; }
+        @keyframes p-out { 0% { transform: scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1.5); opacity: 0; } }
 
-        /* ショップUI */
-        #shop {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95);
-            z-index: 1000; display: none; flex-direction: column; padding: 20px; box-sizing: border-box;
+        /* ショップ画面 */
+        #shop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: none; flex-direction: column; padding: 20px; box-sizing: border-box; border: 10px solid var(--purple); }
+        .shop-item { 
+            background: #111; border: 2px solid #333; padding: 15px; margin-bottom: 10px; border-radius: 10px; 
+            display: flex; justify-content: space-between; align-items: center; filter: grayscale(1); opacity: 0.5; transition: 0.2s;
         }
-        .shop-item {
-            background: #111; border: 2px solid #333; padding: 15px; margin-bottom: 10px;
-            border-radius: 10px; display: flex; justify-content: space-between; align-items: center;
-            opacity: 0.4; filter: grayscale(1); transition: 0.2s;
-        }
-        .shop-item.active { opacity: 1; filter: grayscale(0); border-color: var(--blue); }
+        .shop-item.can-buy { filter: grayscale(0); opacity: 1; border-color: var(--blue); cursor: pointer; }
     </style>
 </head>
 <body>
@@ -95,118 +67,124 @@
 <div id="game-screen">
     <div id="bg"></div>
 
-    <div id="hud">
-        <div class="pill">POWER: <span id="pwr-val">1</span></div>
-        <div class="pill">SHIELD: 100%</div>
+    <div id="leaderboard">
+        <div style="font-size:12px; color:var(--blue); margin-bottom:8px;">ONLINE RANKING</div>
+        <div id="rank-list"></div>
     </div>
 
-    <div id="target-list">
-        <div class="target-card">
-            <span>TOP RANKER</span>
-            <span class="target-score" id="enemy-score">50,000,000</span>
-            <button class="attack-btn" onclick="attackEnemy()">RAID!!</button>
-        </div>
+    <div id="target-panel">
+        <span style="font-size:10px">TARGET: #1</span>
+        <span class="target-score" id="top-val">0</span>
+        <button class="btn btn-steal" style="padding:10px; font-size:14px; width:100%" onclick="stealFromTop()">STEAL!!</button>
     </div>
 
     <div id="core-container" onmousedown="clickCore(event)" ontouchstart="clickCore(event)">
-        <div id="score">0</div>
-        <div id="mps">0 /s</div>
+        <div id="score-display">0</div>
+        <div id="mps-display">0 /s</div>
     </div>
 
     <div id="footer">
-        <button class="main-btn" onclick="openShop()">UPGRADES</button>
+        <button class="btn" onclick="openShop()">UPGRADES</button>
     </div>
 </div>
 
-<!-- SHOP -->
 <div id="shop">
-    <h1 style="color:var(--purple)">EMPIRE ARMORY</h1>
+    <h1 style="color:var(--purple); margin:0 0 20px 0;">UPGRADES</h1>
     <div id="shop-items" style="flex:1; overflow-y:auto"></div>
-    <button class="main-btn" style="background:#fff; color:#000; box-shadow: 0 6px 0 #999;" onclick="closeShop()">CLOSE</button>
+    <button class="btn" style="background:#fff; color:#000;" onclick="closeShop()">BACK</button>
 </div>
 
 <script>
+    // --- 【重要】ここにリーダーのFirebase情報を貼り付け ---
+    const firebaseConfig = {
+        apiKey: "AIzaSy...",
+  authDomain: "your-project-id.firebaseapp.com",
+  databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project-id.appspot.com",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:abcdef123456"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const myId = "USR-" + Math.random().toString(36).substr(2, 5).toUpperCase();
     let score = 0;
-    let clickCount = 0;
-    let enemyScore = 50000000;
+    let mps = 0;
+    let topPlayer = { id: "", score: 0 };
     const items = [
-        { name: "Auto Miner", cost: 15, mps: 1, count: 0 },
-        { name: "Double Bit", cost: 100, mps: 8, count: 0 },
-        { name: "Logic Bomb", cost: 1200, mps: 50, count: 0 },
-        { name: "Mass Driver", cost: 15000, mps: 400, count: 0 },
-        { name: "Void Cannon", cost: 200000, mps: 3000, count: 0 }
+        { name: "Digit Miner", cost: 15, mps: 1, count: 0 },
+        { name: "Data Siphon", cost: 150, mps: 10, count: 0 },
+        { name: "Logic Core", cost: 2000, mps: 85, count: 0 },
+        { name: "Empire Rig", cost: 25000, mps: 700, count: 0 }
     ];
+
+    function syncScore() {
+        db.ref('users/' + myId).set({ score: Math.floor(score), mps: mps });
+    }
+
+    db.ref('users').orderByChild('score').limitToLast(10).on('value', (snap) => {
+        const list = document.getElementById('rank-list');
+        list.innerHTML = '';
+        let players = [];
+        snap.forEach(child => players.unshift({ id: child.key, ...child.val() }));
+        
+        topPlayer = players[0] || { id: "", score: 0 };
+        document.getElementById('top-val').innerText = topPlayer.score.toLocaleString();
+
+        players.forEach((p, i) => {
+            const div = document.createElement('div');
+            div.className = `rank-item ${p.id === myId ? 'is-me' : ''}`;
+            div.innerHTML = `<span>#${i+1} ${p.id}</span><span>${p.score.toLocaleString()}</span>`;
+            list.appendChild(div);
+        });
+    });
 
     function clickCore(e) {
         if(e.type === 'touchstart') e.preventDefault();
-        const screen = document.getElementById('game-screen');
-        const scoreEl = document.getElementById('score');
+        
+        const display = document.getElementById('score-display');
+        display.style.transform = "scale(1.1)";
+        setTimeout(() => display.style.transform = "scale(1)", 50);
 
-        // 演出：画面揺れ
-        screen.classList.add('shake');
-        setTimeout(() => screen.classList.remove('shake'), 100);
-
-        // クリティカル判定
-        let isCrit = Math.random() < 0.05;
-        let power = 1 + Math.floor(getTotalMps() * 0.15);
-        if(isCrit) power *= 20;
-
+        let power = 1 + Math.floor(mps * 0.2);
         score += power;
         
-        // 演出：数字ポップ
-        scoreEl.style.transform = "scale(1.2) rotate(3deg)";
-        setTimeout(() => scoreEl.style.transform = "scale(1)", 50);
-
-        const x = e.clientX || e.touches[0].clientX;
-        const y = e.clientY || e.touches[0].clientY;
-        spawnParticle(x, y, power, isCrit);
+        const x = e.clientX || (e.touches && e.touches[0].clientX);
+        const y = e.clientY || (e.touches && e.touches[0].clientY);
+        spawnParticle(x, y, `+${power}`, 'var(--yellow)');
         updateUI();
     }
 
-    function spawnParticle(x, y, val, crit) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        p.innerText = crit ? `CRITICAL!! +${val}` : `+${val}`;
-        p.style.left = x + 'px'; p.style.top = y + 'px';
-        p.style.color = crit ? 'var(--pink)' : 'white';
-        p.style.fontSize = crit ? '30px' : '20px';
-        p.style.setProperty('--tx', (Math.random()-0.5)*300 + 'px');
-        p.style.setProperty('--ty', (Math.random()-1)*300 + 'px');
-        document.body.appendChild(p);
-        setTimeout(() => p.remove(), 600);
-    }
+    function stealFromTop() {
+        if (score < 100 || topPlayer.id === myId) return;
+        let cost = Math.floor(score * 0.1); 
+        score -= cost;
+        let damage = cost * 10; 
+        let reward = Math.floor(damage * 0.3); 
 
-    function attackEnemy() {
-        if(score < 100) return;
-        let dmg = Math.floor(score * 0.5);
-        score -= dmg;
-        enemyScore -= dmg * 10;
-        if(enemyScore < 0) enemyScore = 0;
+        db.ref('users/' + topPlayer.id + '/score').transaction(current => (current || 0) - damage);
+        score += reward;
         
-        // 略奪演出：画面真っ赤
-        document.body.style.background = 'red';
-        setTimeout(() => document.body.style.background = '#000', 50);
+        document.body.style.background = '#300';
+        setTimeout(() => document.body.style.background = '#000', 100);
+        spawnParticle(window.innerWidth/2, window.innerHeight/2, `STEAL +${reward}!!`, 'var(--pink)');
         updateUI();
     }
 
-    function getTotalMps() { return items.reduce((s, i) => s + (i.mps * i.count), 0); }
+    function spawnParticle(x, y, txt, color) {
+        const p = document.createElement('div');
+        p.className = 'particle'; p.innerText = txt;
+        p.style.left = x + 'px'; p.style.top = y + 'px'; p.style.color = color;
+        p.style.setProperty('--tx', (Math.random()-0.5)*150+'px');
+        p.style.setProperty('--ty', (Math.random()-1)*150+'px');
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 500);
+    }
 
     function updateUI() {
-        document.getElementById('score').innerText = Math.floor(score).toLocaleString();
-        document.getElementById('mps').innerText = getTotalMps().toLocaleString() + " /s";
-        document.getElementById('pwr-val').innerText = (1 + Math.floor(getTotalMps() * 0.15)).toLocaleString();
-        document.getElementById('enemy-score').innerText = Math.floor(enemyScore).toLocaleString();
-        
-        // ショップ状態更新
-        items.forEach((item, i) => {
-            const btn = document.getElementById(`item-${i}`);
-            if(btn) {
-                if(score >= item.cost) btn.classList.add('active');
-                else btn.classList.remove('active');
-                document.getElementById(`cost-${i}`).innerText = item.cost.toLocaleString();
-                document.getElementById(`cnt-${i}`).innerText = item.count;
-            }
-        });
+        document.getElementById('score-display').innerText = Math.floor(score).toLocaleString();
+        document.getElementById('mps-display').innerText = mps.toLocaleString() + " /s";
     }
 
     function openShop() {
@@ -214,18 +192,18 @@
         container.innerHTML = '';
         items.forEach((item, i) => {
             const div = document.createElement('div');
-            div.className = `shop-item ${score >= item.cost ? 'active' : ''}`;
-            div.id = `item-${i}`;
+            div.className = `shop-item ${score >= item.cost ? 'can-buy' : ''}`;
             div.onclick = () => {
                 if(score >= items[i].cost) {
                     score -= items[i].cost;
                     items[i].count++;
-                    items[i].cost = Math.floor(items[i].cost * 1.4);
-                    openShop(); // リロード
+                    mps += items[i].mps;
+                    items[i].cost = Math.floor(items[i].cost * 1.5);
+                    openShop();
                     updateUI();
                 }
             };
-            div.innerHTML = `<div><b>${item.name}</b><br><span id="cost-${i}">${item.cost}</span></div><div id="cnt-${i}" style="font-size:24px">${item.count}</div>`;
+            div.innerHTML = `<div><b>${item.name}</b><br>$${item.cost.toLocaleString()}</div><div>${item.count}</div>`;
             container.appendChild(div);
         });
         document.getElementById('shop').style.display = 'flex';
@@ -234,7 +212,8 @@
     function closeShop() { document.getElementById('shop').style.display = 'none'; }
 
     setInterval(() => {
-        score += (getTotalMps() / 10);
+        score += (mps / 10);
+        syncScore();
         updateUI();
     }, 100);
 </script>
