@@ -4,218 +4,194 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>THE NUMBER: WARFARE</title>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
-        :root { --yellow: #fff000; --pink: #ff007c; --blue: #00e5ff; --purple: #7000ff; }
-        body { margin: 0; background: #000; color: white; font-family: 'Arial Black', sans-serif; overflow: hidden; touch-action: none; }
-        #game-screen { width: 100%; height: 100dvh; display: flex; flex-direction: column; align-items: center; position: relative; }
+        :root { --neon-pink: #ff007c; --neon-blue: #00e5ff; --neon-yellow: #fff000; }
+        body { margin: 0; background: #000; color: white; font-family: 'Courier New', Courier, monospace; overflow-x: hidden; touch-action: manipulation; }
+        
+        /* メインレイアウト */
+        #game-container { display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+        
+        /* スコア表示 */
+        #score-panel { text-align: center; margin-bottom: 20px; }
+        #score-val { font-size: 3rem; color: var(--neon-yellow); text-shadow: 0 0 10px var(--neon-yellow); font-weight: bold; }
+        #mps-val { font-size: 1rem; color: var(--neon-blue); }
 
-        /* 背景：静かに回転するサンバースト */
-        #bg {
-            position: absolute; width: 200vmax; height: 200vmax; top: 50%; left: 50%;
-            margin: -100vmax; background: conic-gradient(from 0deg, #0a0a0a 0deg 15deg, #000 15deg 30deg);
-            z-index: 0; animation: rotate 30s linear infinite; pointer-events: none;
+        /* コアボタン */
+        #core-btn {
+            width: 180px; height: 180px; border-radius: 50%; background: transparent;
+            border: 5px solid var(--neon-pink); color: var(--neon-pink); font-size: 1.5rem; font-weight: bold;
+            cursor: pointer; box-shadow: 0 0 20px var(--neon-pink); transition: 0.1s; outline: none; margin: 20px 0;
         }
-        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        #core-btn:active { transform: scale(0.9); background: var(--neon-pink); color: white; }
 
-        /* ランキングボード */
-        #leaderboard {
-            position: absolute; left: 10px; top: 20px; width: 160px; z-index: 100;
-            background: rgba(0,0,0,0.85); border: 2px solid var(--blue); border-radius: 10px; padding: 10px;
-        }
-        .rank-item { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; border-bottom: 1px solid #222; }
-        .rank-item.is-me { color: var(--yellow); font-weight: bold; }
+        /* ランキング */
+        #leaderboard { width: 100%; max-width: 400px; background: rgba(20,20,20,0.9); border: 1px solid var(--neon-blue); border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+        .rank-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #333; font-size: 0.9rem; }
+        .rank-item.is-me { color: var(--neon-yellow); border-left: 3px solid var(--neon-yellow); padding-left: 5px; }
+        .attack-btn { background: var(--neon-pink); border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
 
-        /* 攻撃対象パネル */
-        #target-panel {
-            position: absolute; right: 10px; top: 20px; width: 140px; z-index: 100;
-            background: #111; border: 3px solid var(--pink); border-radius: 15px; padding: 10px; text-align: center;
-        }
-        .target-score { font-size: 18px; color: var(--pink); display: block; margin-bottom: 8px; font-family: monospace; }
+        /* アップグレードショップ */
+        #shop { width: 100%; max-width: 400px; display: grid; gap: 10px; }
+        .shop-item { background: #1a1a1a; border: 1px solid #444; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .shop-item:hover { border-color: var(--neon-yellow); }
+        .shop-item.disabled { opacity: 0.5; cursor: not-allowed; }
+        .item-info b { color: var(--neon-blue); }
 
-        /* メインコア（クリック対象） */
-        #core-container { margin-top: 35dvh; text-align: center; z-index: 10; cursor: pointer; }
-        #score-display { 
-            font-size: 20vw; color: var(--yellow); filter: drop-shadow(0 0 15px var(--yellow)); 
-            line-height: 0.8; transition: transform 0.05s; 
-        }
-        #mps-display { color: var(--blue); font-size: 5vw; margin-top: 15px; opacity: 0.8; }
-
-        /* フッターボタン */
-        #footer { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; z-index: 100; }
-        .btn { background: var(--purple); color: white; border: 3px solid white; padding: 15px 30px; border-radius: 50px; font-weight: 900; box-shadow: 0 6px 0 #4a00a8; cursor: pointer; }
-        .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #4a00a8; }
-        .btn-steal { background: var(--pink); box-shadow: 0 6px 0 #b30057; }
-
-        /* ポップアップエフェクト */
-        .particle { position: absolute; pointer-events: none; font-weight: 900; animation: p-out 0.5s ease-out forwards; white-space: nowrap; }
-        @keyframes p-out { 0% { transform: scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1.5); opacity: 0; } }
-
-        /* ショップ画面 */
-        #shop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: none; flex-direction: column; padding: 20px; box-sizing: border-box; border: 10px solid var(--purple); }
-        .shop-item { 
-            background: #111; border: 2px solid #333; padding: 15px; margin-bottom: 10px; border-radius: 10px; 
-            display: flex; justify-content: space-between; align-items: center; filter: grayscale(1); opacity: 0.5; transition: 0.2s;
-        }
-        .shop-item.can-buy { filter: grayscale(0); opacity: 1; border-color: var(--blue); cursor: pointer; }
+        /* 警告通知 */
+        #alert { position: fixed; top: 10%; color: var(--neon-pink); font-weight: bold; font-size: 1.2rem; display: none; z-index: 100; text-shadow: 0 0 5px red; }
     </style>
 </head>
 <body>
 
-<div id="game-screen">
-    <div id="bg"></div>
+<div id="game-container">
+    <div id="alert">!! UNDER ATTACK !!</div>
+
+    <div id="score-panel">
+        <div id="score-val">0</div>
+        <div id="mps-val">MPS: 0</div>
+    </div>
+
+    <button id="core-btn" onclick="clickCore()">CHARGE</button>
 
     <div id="leaderboard">
-        <div style="font-size:12px; color:var(--blue); margin-bottom:8px;">ONLINE RANKING</div>
-        <div id="rank-list"></div>
+        <div style="color: var(--neon-blue); margin-bottom: 10px; border-bottom: 1px solid;">ONLINE TARGETS</div>
+        <div id="rank-list">読み込み中...</div>
     </div>
 
-    <div id="target-panel">
-        <span style="font-size:10px">TARGET: #1</span>
-        <span class="target-score" id="top-val">0</span>
-        <button class="btn btn-steal" style="padding:10px; font-size:14px; width:100%" onclick="stealFromTop()">STEAL!!</button>
+    <div id="shop">
+        <div id="shop-items"></div>
     </div>
-
-    <div id="core-container" onmousedown="clickCore(event)" ontouchstart="clickCore(event)">
-        <div id="score-display">0</div>
-        <div id="mps-display">0 /s</div>
-    </div>
-
-    <div id="footer">
-        <button class="btn" onclick="openShop()">UPGRADES</button>
-    </div>
-</div>
-
-<div id="shop">
-    <h1 style="color:var(--purple); margin:0 0 20px 0;">UPGRADES</h1>
-    <div id="shop-items" style="flex:1; overflow-y:auto"></div>
-    <button class="btn" style="background:#fff; color:#000;" onclick="closeShop()">BACK</button>
 </div>
 
 <script>
-    // --- 【重要】ここにリーダーのFirebase情報を貼り付け ---
+    // --- FIREBASE 設定 ---
     const firebaseConfig = {
-        apiKey: "AIzaSy...",
-  authDomain: "your-project-id.firebaseapp.com",
-  databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcdef123456"
+        apiKey: "AIzaSyAYnC_bHIPYElG8zjbL-7vEIH4rWSA7hbw",
+        authDomain: "my-warfare-game-fa3db.firebaseapp.com",
+        databaseURL: "https://my-warfare-game-fa3db-default-rtdb.firebaseio.com",
+        projectId: "my-warfare-game-fa3db",
+        storageBucket: "my-warfare-game-fa3db.firebasestorage.app",
+        messagingSenderId: "408551026184",
+        appId: "1:408551026184:web:85e80b61c8110ce3d6abbd"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const myId = "USR-" + Math.random().toString(36).substr(2, 5).toUpperCase();
+    // ユーザー情報
+    let myId = localStorage.getItem('warfare_v2_id') || "X-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+    localStorage.setItem('warfare_v2_id', myId);
+
     let score = 0;
     let mps = 0;
-    let topPlayer = { id: "", score: 0 };
-    const items = [
-        { name: "Digit Miner", cost: 15, mps: 1, count: 0 },
-        { name: "Data Siphon", cost: 150, mps: 10, count: 0 },
-        { name: "Logic Core", cost: 2000, mps: 85, count: 0 },
-        { name: "Empire Rig", cost: 25000, mps: 700, count: 0 }
+    let items = [
+        { id: 0, name: "CPU Miner", cost: 15, power: 1, count: 0 },
+        { id: 1, name: "Data Siphon", cost: 100, power: 8, count: 0 },
+        { id: 2, name: "Logic Bomb", cost: 500, power: 45, count: 0 }
     ];
 
-    function syncScore() {
-        db.ref('users/' + myId).set({ score: Math.floor(score), mps: mps });
+    // クリック処理
+    function clickCore() {
+        score += 1 + Math.floor(mps * 0.1);
+        updateUI();
+        saveToDB();
     }
 
+    // 施設購入
+    function buyItem(idx) {
+        let item = items[idx];
+        if (score >= item.cost) {
+            score -= item.cost;
+            item.count++;
+            mps += item.power;
+            item.cost = Math.floor(item.cost * 1.5);
+            updateUI();
+            saveToDB();
+            renderShop();
+        }
+    }
+
+    // 攻撃処理 (Transactionを使用)
+    function launchAttack(targetId) {
+        let attackCost = Math.floor(score * 0.2); // 所持金の20%を消費
+        if (attackCost < 50) return alert("エネルギーが足りません (最小50必要)");
+
+        score -= attackCost;
+        let damage = attackCost * 3; // コストの3倍のダメージ
+
+        // 相手のスコアを減らす
+        db.ref('users/' + targetId + '/score').transaction((current) => {
+            return Math.max(0, (current || 0) - damage);
+        });
+
+        // 奪い取りボーナス
+        score += Math.floor(damage * 0.2);
+        saveToDB();
+        alert(targetId + " に大ダメージを与え、一部を奪い取った！");
+    }
+
+    // データベース保存
+    function saveToDB() {
+        db.ref('users/' + myId).update({
+            score: Math.floor(score),
+            mps: mps
+        });
+    }
+
+    // UI更新
+    function updateUI() {
+        document.getElementById('score-val').innerText = Math.floor(score).toLocaleString();
+        document.getElementById('mps-val').innerText = "MPS: " + mps.toLocaleString();
+    }
+
+    function renderShop() {
+        const container = document.getElementById('shop-items');
+        container.innerHTML = items.map((item, i) => `
+            <div class="shop-item ${score < item.cost ? 'disabled' : ''}" onclick="buyItem(${i})">
+                <div class="item-info"><b>${item.name}</b><br>Cost: ${item.cost} / +${item.power}s</div>
+                <div>Lv.${item.count}</div>
+            </div>
+        `).join('');
+    }
+
+    // 1秒ごとの自動増加
+    setInterval(() => {
+        score += (mps / 10);
+        updateUI();
+        renderShop(); // スコアに合わせて買えるかチェック
+    }, 100);
+
+    // 5秒ごとにDB同期
+    setInterval(saveToDB, 5000);
+
+    // ランキング監視
     db.ref('users').orderByChild('score').limitToLast(10).on('value', (snap) => {
         const list = document.getElementById('rank-list');
-        list.innerHTML = '';
+        list.innerHTML = "";
         let players = [];
-        snap.forEach(child => players.unshift({ id: child.key, ...child.val() }));
-        
-        topPlayer = players[0] || { id: "", score: 0 };
-        document.getElementById('top-val').innerText = topPlayer.score.toLocaleString();
+        snap.forEach(child => { players.unshift({ id: child.key, ...child.val() }); });
 
-        players.forEach((p, i) => {
+        players.forEach((p, idx) => {
+            // 被弾検知
+            if (p.id === myId && p.score < score - 10) {
+                document.getElementById('alert').style.display = 'block';
+                setTimeout(() => document.getElementById('alert').style.display = 'none', 2000);
+            }
+            if (p.id === myId) score = p.score;
+
             const div = document.createElement('div');
             div.className = `rank-item ${p.id === myId ? 'is-me' : ''}`;
-            div.innerHTML = `<span>#${i+1} ${p.id}</span><span>${p.score.toLocaleString()}</span>`;
+            div.innerHTML = `
+                <span>#${idx+1} ${p.id} (${Math.floor(p.score).toLocaleString()})</span>
+                ${p.id !== myId ? `<button class="attack-btn" onclick="launchAttack('${p.id}')">STEAL</button>` : ' (YOU)'}
+            `;
             list.appendChild(div);
         });
     });
 
-    function clickCore(e) {
-        if(e.type === 'touchstart') e.preventDefault();
-        
-        const display = document.getElementById('score-display');
-        display.style.transform = "scale(1.1)";
-        setTimeout(() => display.style.transform = "scale(1)", 50);
-
-        let power = 1 + Math.floor(mps * 0.2);
-        score += power;
-        
-        const x = e.clientX || (e.touches && e.touches[0].clientX);
-        const y = e.clientY || (e.touches && e.touches[0].clientY);
-        spawnParticle(x, y, `+${power}`, 'var(--yellow)');
-        updateUI();
-    }
-
-    function stealFromTop() {
-        if (score < 100 || topPlayer.id === myId) return;
-        let cost = Math.floor(score * 0.1); 
-        score -= cost;
-        let damage = cost * 10; 
-        let reward = Math.floor(damage * 0.3); 
-
-        db.ref('users/' + topPlayer.id + '/score').transaction(current => (current || 0) - damage);
-        score += reward;
-        
-        document.body.style.background = '#300';
-        setTimeout(() => document.body.style.background = '#000', 100);
-        spawnParticle(window.innerWidth/2, window.innerHeight/2, `STEAL +${reward}!!`, 'var(--pink)');
-        updateUI();
-    }
-
-    function spawnParticle(x, y, txt, color) {
-        const p = document.createElement('div');
-        p.className = 'particle'; p.innerText = txt;
-        p.style.left = x + 'px'; p.style.top = y + 'px'; p.style.color = color;
-        p.style.setProperty('--tx', (Math.random()-0.5)*150+'px');
-        p.style.setProperty('--ty', (Math.random()-1)*150+'px');
-        document.body.appendChild(p);
-        setTimeout(() => p.remove(), 500);
-    }
-
-    function updateUI() {
-        document.getElementById('score-display').innerText = Math.floor(score).toLocaleString();
-        document.getElementById('mps-display').innerText = mps.toLocaleString() + " /s";
-    }
-
-    function openShop() {
-        const container = document.getElementById('shop-items');
-        container.innerHTML = '';
-        items.forEach((item, i) => {
-            const div = document.createElement('div');
-            div.className = `shop-item ${score >= item.cost ? 'can-buy' : ''}`;
-            div.onclick = () => {
-                if(score >= items[i].cost) {
-                    score -= items[i].cost;
-                    items[i].count++;
-                    mps += items[i].mps;
-                    items[i].cost = Math.floor(items[i].cost * 1.5);
-                    openShop();
-                    updateUI();
-                }
-            };
-            div.innerHTML = `<div><b>${item.name}</b><br>$${item.cost.toLocaleString()}</div><div>${item.count}</div>`;
-            container.appendChild(div);
-        });
-        document.getElementById('shop').style.display = 'flex';
-    }
-
-    function closeShop() { document.getElementById('shop').style.display = 'none'; }
-
-    setInterval(() => {
-        score += (mps / 10);
-        syncScore();
-        updateUI();
-    }, 100);
+    renderShop();
 </script>
 </body>
 </html>
